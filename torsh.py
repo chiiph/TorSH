@@ -1,5 +1,7 @@
 #! /bin/env python
 
+from __future__ import unicode_literals, print_function
+
 import cmd
 import getopt
 import socket
@@ -95,10 +97,10 @@ class TorSH(cmd.Cmd):
     except getopt.GetoptError:
       # TODO: implement a generic usage function
       # self.usage() 
-      print "ERROR at the arguments"
+      print("ERROR at the arguments")
       return
     except Exception as e:
-      print "ERROR:", e[0]
+      print("ERROR:", e[0])
 
   def do_get_info(self, name):
     """
@@ -113,9 +115,9 @@ class TorSH(cmd.Cmd):
     try:
       output = self._connection.get_info(name.split(" ")[:1])
       for line in formatter.select_formatter(name, output[name]):
-        print line
+        print(line)
     except Exception as e:
-      print "ERROR:", e[0]
+      print("ERROR:", e[0])
 
   def do_set_options(self, keyvalues):
     """
@@ -133,9 +135,9 @@ class TorSH(cmd.Cmd):
 
     try:
       output = self._connection.set_options(final_list)
-      print formatter.format_reply(output[0])
+      print(formatter.format_reply(output[0]))
     except Exception as e:
-      print e[0]
+      print(e[0])
 
   def do_reset_options(self, keys):
     """
@@ -147,9 +149,9 @@ class TorSH(cmd.Cmd):
 
     try:
       output = self._connection.reset_options(keys.split(" "))
-      print formatter.format_reply(output[0])
+      print(formatter.format_reply(output[0]))
     except Exception as e:
-      print e[0]
+      print(e[0])
 
   def do_get_option(self, name):
     """
@@ -163,9 +165,9 @@ class TorSH(cmd.Cmd):
       output = self._connection.get_option(name)
       formatted = formatter.format_getconf(output)
       for line in formatted:
-        print line
+        print(line)
     except Exception as e:
-      print e[0]
+      print(e[0])
 
   def _do_aliases(self):
     self.do_conn = self.do_connect
