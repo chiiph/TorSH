@@ -102,7 +102,7 @@ class TorSH(cmd.Cmd):
 
   def do_get_info(self, name):
     """
-    Issues a get-info command with the first element of name.
+    Issues a GET-INFO command with the first element of name.
     If name has more than one word, it's ignored.
 
     Usage:
@@ -117,9 +117,61 @@ class TorSH(cmd.Cmd):
     except Exception as e:
       print "ERROR:", e[0]
 
+  def do_set_options(self, keyvalues):
+    """
+      Issues a SETCONF command.
+
+      Usage:
+        set_options key1=val1 key2=val2 ...
+    """
+
+    keyvalue_list = keyvalues.split(" ")
+    final_list = []
+    for keyvalue in keyvalue_list:
+      pair = keyvalue.split("=")
+      final_list.append((pair[0], pair[1]))
+
+    try:
+      output = self._connection.set_options(final_list)
+      print formatter.format_reply(output[0])
+    except Exception as e:
+      print e[0]
+
+  def do_reset_options(self, keys):
+    """
+      Issues a RESETCONF for the given keys.
+
+      Usage:
+        reset_conf key1 key2
+    """
+
+    try:
+      output = self._connection.reset_options(keys.split(" "))
+      print formatter.format_reply(output[0])
+    except Exception as e:
+      print e[0]
+
+  def do_get_option(self, name):
+    """
+      Issues a GETCONF.
+
+      Usage:
+        get_option key1 key2 ...
+    """
+
+    try:
+      output = self._connection.get_option(name)
+      formatted = formatter.format_getconf(output)
+      for line in formatted:
+        print line
+    except Exception as e:
+      print e[0]
+
   def _do_aliases(self):
     self.do_conn = self.do_connect
     self.do_gi = self.do_get_info
+    self.do_so = self.do_set_options
+    self.do_ro = self.do_reset_options
 
 if __name__ == '__main__':
     TorSH().cmdloop()
