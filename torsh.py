@@ -7,8 +7,9 @@ import getopt
 import socket
 import sys
 import getpass
+from subprocess import Popen, PIPE
 
-from pytorctl import TorCtl
+from pytorctl import TorCtl, PathSupport
 
 import formatter
 
@@ -24,6 +25,18 @@ class TorSH(cmd.Cmd):
     self._socket = None
     self._connection = None
     self._threads = None
+
+    self._path = None
+    self._selmgr = PathSupport.SelectionManager(
+        pathlen=3,
+        order_exits=True,
+        percent_fast=80,
+        percent_skip=0,
+        min_bw=1024,
+        use_all_exits=True,
+        uniform=True,
+        use_exit=None,
+        use_guards=True)
 
     self._do_aliases()
 
@@ -79,6 +92,7 @@ class TorSH(cmd.Cmd):
       self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self._socket.connect((host,port))
       self._connection = TorCtl.Connection(self._socket)
+#      self._connection.debug(file("control.log", "w", buffering=0))
       self._threads = self._connection.launch_thread()
       auth_type, auth_value = self._connection.get_auth_type(), ""
       
@@ -87,10 +101,19 @@ class TorSH(cmd.Cmd):
         else:
           try: auth_value = getpass.getpass()
           except KeyboardInterrupt: return None
-      elif auth_type == AUTH_TYPE.COOKIE:
+      elif auth_type == TorCtl.AUTH_TYPE.COOKIE:
         auth_value = self._connection.get_auth_cookie_path()
 
       self._connection.authenticate(auth_value)
+
+#      self._path = PathSupport.PathBuilder(self._connection, self._selmgr)
+#      self._connection.set_event_handler(self._path)
+#      self._connection.set_events([TorCtl.EVENT_TYPE.STREAM,
+#        TorCtl.EVENT_TYPE.BW,
+#        TorCtl.EVENT_TYPE.NEWCONSENSUS,
+#        TorCtl.EVENT_TYPE.NEWDESC,
+#        TorCtl.EVENT_TYPE.CIRC,
+#        TorCtl.EVENT_TYPE.STREAM_BW], True)
 
       self.prompt = "torsh@%s:%i # " % (host, port)
 
@@ -113,11 +136,19 @@ class TorSH(cmd.Cmd):
     """
 
     try:
-      output = self._connection.get_info(name.split(" ")[:1])
-      for line in formatter.select_formatter(name, output[name]):
-        print(line)
+      pipes = name.split("|")
+      if len(pipes) > 1:
+        names = pipes[0].split(" ")
+        output = self._connection.get_info(names)
+        p2 = Popen(pipes[1].split(" "), stdin=PIPE, stdout=PIPE)
+        stdin = "\n".join(formatter.select_formatter(names[0],output[names[0]]))
+        print(p2.communicate(input=stdin)[0])
+      else:
+        output = self._connection.get_info(name.split(" ")[:1])
+        for line in formatter.select_formatter(name, output[name]):
+          print(line)
     except Exception as e:
-      print("ERROR:", e[0])
+      print("ERROR:", e)
 
   def do_set_options(self, keyvalues):
     """
@@ -166,6 +197,12 @@ class TorSH(cmd.Cmd):
       formatted = formatter.format_getconf(output)
       for line in formatted:
         print(line)
+    except Exception as e:
+      print(e[0])
+
+  def do_last_exit(self, line):
+    try:
+      print(self._path.last_exit.idhex)
     except Exception as e:
       print(e[0])
 
