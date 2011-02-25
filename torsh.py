@@ -7,6 +7,7 @@ import getopt
 import socket
 import sys
 import getpass
+from termcolors import colorize
 from subprocess import Popen, PIPE
 
 from pytorctl import TorCtl, PathSupport, TorUtil
@@ -17,7 +18,7 @@ class TorSH(cmd.Cmd):
   """ Shell for talking to Tor and debugging """
   def __init__(self):
     self.localenv = {}
-    self.prompt = "torsh # "
+    self.prompt = "%s # " % colorize("torsh", fg="red", opts=("bold",))
     self.completekey = "\t"
     self.cmdqueue = []
     self.stdout = sys.stdout
@@ -115,7 +116,9 @@ class TorSH(cmd.Cmd):
         TorCtl.EVENT_TYPE.CIRC,
         TorCtl.EVENT_TYPE.STREAM_BW], True)
 
-      self.prompt = "torsh@%s:%i # " % (host, port)
+      self.prompt = "%s@%s:%s # " % (colorize("torsh", fg="red", opts=("bold",)),\
+          colorize(host, fg="blue"),\
+          colorize(str(port), fg="blue"))
 
     except getopt.GetoptError:
       # TODO: implement a generic usage function
