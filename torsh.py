@@ -9,7 +9,7 @@ import sys
 import getpass
 from subprocess import Popen, PIPE
 
-from pytorctl import TorCtl, PathSupport
+from pytorctl import TorCtl, PathSupport, TorUtil
 
 import formatter
 
@@ -92,7 +92,7 @@ class TorSH(cmd.Cmd):
       self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self._socket.connect((host,port))
       self._connection = TorCtl.Connection(self._socket)
-#      self._connection.debug(file("control.log", "w", buffering=0))
+      self._connection.debug(file("control.log", "w", buffering=0))
       self._threads = self._connection.launch_thread()
       auth_type, auth_value = self._connection.get_auth_type(), ""
       
@@ -106,14 +106,14 @@ class TorSH(cmd.Cmd):
 
       self._connection.authenticate(auth_value)
 
-#      self._path = PathSupport.PathBuilder(self._connection, self._selmgr)
-#      self._connection.set_event_handler(self._path)
-#      self._connection.set_events([TorCtl.EVENT_TYPE.STREAM,
-#        TorCtl.EVENT_TYPE.BW,
-#        TorCtl.EVENT_TYPE.NEWCONSENSUS,
-#        TorCtl.EVENT_TYPE.NEWDESC,
-#        TorCtl.EVENT_TYPE.CIRC,
-#        TorCtl.EVENT_TYPE.STREAM_BW], True)
+      self._path = PathSupport.PathBuilder(self._connection, self._selmgr)
+      self._connection.set_event_handler(self._path)
+      self._connection.set_events([TorCtl.EVENT_TYPE.STREAM,
+        TorCtl.EVENT_TYPE.BW,
+        TorCtl.EVENT_TYPE.NEWCONSENSUS,
+        TorCtl.EVENT_TYPE.NEWDESC,
+        TorCtl.EVENT_TYPE.CIRC,
+        TorCtl.EVENT_TYPE.STREAM_BW], True)
 
       self.prompt = "torsh@%s:%i # " % (host, port)
 
@@ -124,6 +124,11 @@ class TorSH(cmd.Cmd):
       return
     except Exception as e:
       print("ERROR:", e[0])
+
+  def _do_pipe(self, cmds, output):
+    p2 = Popen(["bash", "-c", "|".join(cmds)], stdin=PIPE, stdout=PIPE)
+    stdin = "\n".join(output)
+    return p2.communicate(input=stdin)[0]
 
   def do_get_info(self, name):
     """
@@ -140,13 +145,11 @@ class TorSH(cmd.Cmd):
       if len(pipes) > 1:
         names = pipes[0].split(" ")
         output = self._connection.get_info(names)
-        p2 = Popen(pipes[1].split(" "), stdin=PIPE, stdout=PIPE)
-        stdin = "\n".join(formatter.select_formatter(names[0],output[names[0]]))
-        print(p2.communicate(input=stdin)[0])
+        output = self._do_pipe(pipes[1:], formatter.select_formatter(names[0], output[names[0]]))
       else:
         output = self._connection.get_info(name.split(" ")[:1])
-        for line in formatter.select_formatter(name, output[name]):
-          print(line)
+        output = "\n".join(formatter.select_formatter(name, output[name]))
+      print(output)
     except Exception as e:
       print("ERROR:", e)
 
