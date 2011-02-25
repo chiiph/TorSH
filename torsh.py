@@ -91,7 +91,7 @@ class TorSH(cmd.Cmd):
 
       self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       self._socket.connect((host,port))
-      self._connection = TorCtl.Connection(self._socket)
+      self._connection = PathSupport.Connection(self._socket)
       self._connection.debug(file("control.log", "w", buffering=0))
       self._threads = self._connection.launch_thread()
       auth_type, auth_value = self._connection.get_auth_type(), ""
@@ -126,6 +126,10 @@ class TorSH(cmd.Cmd):
       print("ERROR:", e[0])
 
   def _do_pipe(self, cmds, output):
+    """
+      Pipes the output to the stdin of the bash piped commands in cmds
+    """
+
     p2 = Popen(["bash", "-c", "|".join(cmds)], stdin=PIPE, stdout=PIPE)
     stdin = "\n".join(output)
     return p2.communicate(input=stdin)[0]
@@ -203,17 +207,34 @@ class TorSH(cmd.Cmd):
     except Exception as e:
       print(e[0])
 
+  def do_cat(self, line):
+    """
+      Just passes the whole command to bash to handle it.
+    """
+    p2 = Popen(["bash", "-c", line])
+
   def do_last_exit(self, line):
+    """
+      Returns the last exit used (metatroller based)
+    """
+
     try:
-      print(self._path.last_exit.idhex)
+      print(self._path.last_exit)
     except Exception as e:
       print(e[0])
 
   def _do_aliases(self):
+    """
+      Builds short aliases for the common commands
+    """
+
     self.do_conn = self.do_connect
     self.do_gi = self.do_get_info
     self.do_so = self.do_set_options
+    self.do_go = self.do_get_option
     self.do_ro = self.do_reset_options
+
+    self.do_le = self.do_last_exit
 
 if __name__ == '__main__':
     TorSH().cmdloop()
