@@ -8,7 +8,7 @@ import socket
 import sys
 import getpass
 from termcolors import colorize
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 
 from pytorctl import TorCtl, PathSupport, TorUtil
 
@@ -17,7 +17,6 @@ import formatter
 class TorSH(cmd.Cmd):
   """ Shell for talking to Tor and debugging """
   def __init__(self):
-    self.localenv = {}
     self.prompt = "%s # " % colorize("torsh", fg="red", opts=("bold",))
     self.completekey = "\t"
     self.cmdqueue = []
@@ -46,6 +45,15 @@ class TorSH(cmd.Cmd):
       self._connection.close()
     
     return True
+
+  def precmd(self, line):
+    if len(line.strip()) < 1:
+      return ""
+
+    if line.strip()[0] == "!":
+      return "%s %s" % ("call", line[1:])
+
+    return line
 
   def do_connect(self, data):
     """ 
@@ -225,6 +233,16 @@ class TorSH(cmd.Cmd):
       print(self._path.last_exit)
     except Exception as e:
       print(e[0])
+
+  def do_call(self, line):
+    """
+      Calls bash to interpret this command.
+    """
+
+    try:
+      p2 = call(["bash", "-c", line])
+    except Exception as e:
+      print(e)
 
   def _do_aliases(self):
     """
