@@ -53,6 +53,7 @@ class TorSH(cmd.Cmd):
     if self._connection:
       self._connection.close()
     
+    print()
     return True
 
   def precmd(self, line):
