@@ -61,9 +61,7 @@ class TorSH(cmd.Cmd):
     if len(line) < 1:
       return ""
 
-    if line[0] == "!":
-      return "%s %s" % ("call", line[1:])
-    elif line[0:2] == "./" or line[0] == "/":
+    if line[0:2] == "./" or line[0] == "/":
       return "%s %s" % ("exec", line)
 
     return line
@@ -247,7 +245,7 @@ class TorSH(cmd.Cmd):
     except Exception as e:
       print(e[0])
 
-  def do_call(self, line):
+  def do_shell(self, line):
     """
       Calls bash to interpret this command.
     """
