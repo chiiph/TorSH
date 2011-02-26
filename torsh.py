@@ -7,6 +7,7 @@ import getopt
 import socket
 import sys
 import getpass
+import os
 from termcolors import colorize
 from subprocess import Popen, PIPE, call
 
@@ -16,7 +17,7 @@ import formatter
 
 class TorSH(cmd.Cmd):
   """ Shell for talking to Tor and debugging """
-  def __init__(self):
+  def __init__(self, init_file = None):
     self.prompt = "%s # " % colorize("torsh", fg="red", opts=("bold",))
     self.completekey = "\t"
     self.cmdqueue = []
@@ -40,6 +41,13 @@ class TorSH(cmd.Cmd):
 
     self._do_aliases()
 
+    if init_file:
+      try:
+        self._execute_file(init_file)
+      except Exception as e:
+        print(e)
+
+
   def do_EOF(self, line):
     if self._connection:
       self._connection.close()
@@ -47,11 +55,15 @@ class TorSH(cmd.Cmd):
     return True
 
   def precmd(self, line):
-    if len(line.strip()) < 1:
+    line = line.strip()
+
+    if len(line) < 1:
       return ""
 
-    if line.strip()[0] == "!":
+    if line[0] == "!":
       return "%s %s" % ("call", line[1:])
+    elif line[0:2] == "./" or line[0] == "/":
+      return "%s %s" % ("exec", line)
 
     return line
 
@@ -244,6 +256,15 @@ class TorSH(cmd.Cmd):
     except Exception as e:
       print(e)
 
+  def do_exec(self, file):
+    """
+      Executes the script in the file specified.
+    """
+    try:
+      self._execute_file(file.strip())
+    except Exception as e:
+      print(e)
+
   def _do_aliases(self):
     """
       Builds short aliases for the common commands
@@ -257,5 +278,43 @@ class TorSH(cmd.Cmd):
 
     self.do_le = self.do_last_exit
 
+  def _execute(self, script):
+    """
+      Executes the linebreak separated script 
+      one line at a time.
+    """
+
+    lines = script.split("\n")
+    for line in lines:
+      self.onecmd(self.precmd(line))
+
+  def _execute_file(self, file):
+    """
+      It reads the whole file and executes it.
+    """
+
+    f = open(file, "r")
+    script = f.read()
+    self._execute(script)
+
+def usage():
+  print("Usage: ...")
+
 if __name__ == '__main__':
-    TorSH().cmdloop()
+  init_file = None
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], "i:h", ["init=", "help"])
+  except getopt.GetoptError, err:
+    print(str(err))
+    usage()
+    sys.exit(2)
+
+  for o, a in opts:
+    if o in ("-h", "--help"):
+      usage()
+      sys.exit()
+    elif o in ("-i", "--init"):
+      init_file = a
+
+  torsh = TorSH(init_file)
+  torsh.cmdloop()
