@@ -229,21 +229,79 @@ class TorSH(cmd.Cmd):
     except Exception as e:
       print(e[0])
 
-  def do_cat(self, line):
+  def do_is_alive(self, line):
     """
-      Just passes the whole command to bash to handle it.
-    """
-    p2 = Popen(["bash", "-c", line])
+      Informs whether the connection is still alive.
 
-  def do_last_exit(self, line):
+      Usage:
+        is_alive
     """
-      Returns the last exit used (metatroller based)
+
+    if self._connection.is_alive():
+      print("Connection still alive.")
+    else:
+      print("Connection has died, please reconnect.")
+
+  def do_save_conf(self, line):
+    """
+      Issues a SAVECONF.
+
+      Usage:
+        save_conf
     """
 
     try:
-      print(self._path.last_exit)
+      print(formatter.format_reply(self._connection.save_conf()))
     except Exception as e:
-      print(e[0])
+      print(e)
+
+  def do_signal(self, line):
+    """
+      Sends a signal to Tor.
+
+      Usage:
+        signal HUP
+        signal INT
+    """
+
+    try:
+      if len(line.strip()) > 0:
+        print(formatter.format_reply(self._connection.send_signal(line.strip().split(" ")[0])))
+    except Exception as e:
+      print(e)
+
+  def do_resolve(self, host):
+    """
+      Resolves the given host through Tor.
+
+      Usage:
+        resolve 10.0.0.1
+    """
+
+    if len(host.strip()) > 0:
+      print(self._connection.resolve(host.strip().split(" ")[0]))
+
+  def do_map_address(self, kvlist):
+    """
+      Issues a MAPADRRES with the give kvlist.
+
+      Usage:
+        map_address 0.0.0.0=torproject.org 1.2.3.4=tor.freehaven.net
+    """
+
+    try:
+      if len(kvlist.strip()) > 0:
+        kvs = kvlist.split(" ")
+        final = []
+        for kv in kvs:
+          tup = kv.split("=")
+          final.append((tup[0], tup[1]))
+        print(formatter.format_reply(self._connection.map_address(final)[0]))
+    except Exception as e:
+      print(e)
+
+  def do_error(self, line):
+    print("ERROR:", line)
 
   def do_shell(self, line):
     """
@@ -263,6 +321,16 @@ class TorSH(cmd.Cmd):
       self._execute_file(file.strip())
     except Exception as e:
       print(e)
+
+  def do_last_exit(self, line):
+    """
+      Returns the last exit used (metatroller based)
+    """
+
+    try:
+      print(self._path.last_exit)
+    except Exception as e:
+      print(e[0])
 
   def _do_aliases(self):
     """
