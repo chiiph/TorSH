@@ -22,6 +22,7 @@ class TorSH(cmd.Cmd):
     self.completekey = "\t"
     self.cmdqueue = []
     self.stdout = sys.stdout
+    TorUtil.logfile = "torsh.log"
 
     self._socket = None
     self._connection = None
